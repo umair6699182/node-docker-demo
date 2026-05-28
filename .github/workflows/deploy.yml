@@ -12,6 +12,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Debug Docker variables
+        run: |
+          echo "Docker username: ${{ secrets.DOCKERHUB_USERNAME }}"
+          echo "Image tag: ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -29,9 +34,11 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest
+      - name: Verify Docker login
+        run: docker info
+
+      - name: Build Docker image only
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest .
+
+      - name: Push Docker image manually
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest

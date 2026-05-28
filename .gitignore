@@ -1,0 +1,13 @@
+node_modules/
+npm-debug.log
+
+.env
+
+.DS_Store
+
+docker-data/
+
+dist/
+build/
+
+*.log

@@ -1,21 +1,16 @@
-name: Test, Build and Push Docker Image
+name: Test, Build, Push and Deploy to EC2
 
 on:
   push:
     branches: [ "main" ]
 
 jobs:
-  test-build-push:
+  test-build-push-deploy:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Debug Docker variables
-        run: |
-          echo "Docker username: ${{ secrets.DOCKERHUB_USERNAME }}"
-          echo "Image tag: ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -34,11 +29,28 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Verify Docker login
-        run: docker info
-
-      - name: Build Docker image only
+      - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest .
 
-      - name: Push Docker image manually
+      - name: Push Docker image to Docker Hub
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest
+
+            docker stop node-docker-demon || true
+            docker rm node-docker-demon || true
+
+            docker run -d \
+              --name node-docker-demon \
+              -p 3000:3000 \
+              --restart always \
+              ${{ secrets.DOCKERHUB_USERNAME }}/node-docker-demon:latest
+
+            docker ps
